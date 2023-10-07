@@ -1,0 +1,58 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: ubuntu:latest  # You can choose a different Ubuntu-based image if needed.
+    steps:
+      - checkout  # Checkout the repository
+      - run:
+          name: Print Hello, world
+          command: echo "Hello, world"
+      - run:
+          name: List all files (including hidden) in the current directory
+          command: ls -la
+      - run:
+          name: Create example.txt
+          command: echo "This is an example text." > example.txt
+      - run:
+          name: Cat the contents of example.txt
+          command: cat example.txt
+      - run:
+          name: Install Zip and Unzip
+          command: |
+            apt-get update && apt-get install -y zip unzip
+      - run:
+          name: Create Zip archive (artifact.zip) of example.txt
+          command: zip artifact.zip example.txt
+      - persist_to_workspace:
+          root: .
+          paths:
+            - artifact.zip
+  deploy:
+    docker:
+      - image: ubuntu:latest
+    steps:
+      - attach_workspace:
+          at: /workspace
+      - run:
+          name: Unzip and list components in the archive
+          command: |
+            cd /workspace
+            unzip -l artifact.zip
+      - run:
+          name: Clean up
+          command: |
+            cd /workspace
+            rm -f example.txt artifact.zip
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: master
+      - deploy:
+          requires:
+            - build
